@@ -3,13 +3,22 @@
 # Module subdirectories are added only when present so the build stays
 # green while modules are implemented incrementally (see CLAUDE.md).
 
-set(IOT_MODULES common core database security device data analytics api)
+set(IOT_MODULES common core database network security device data analytics api)
 set(IOT_LINK_LIBS Threads::Threads)
 
 foreach(module ${IOT_MODULES})
     if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${module}")
         add_subdirectory(${module})
-        list(PREPEND IOT_LINK_LIBS iot_${module})
+        # "network" is a container; its outputs are iot_mqtt, iot_http, etc.
+        if(NOT "${module}" STREQUAL "network")
+            list(PREPEND IOT_LINK_LIBS iot_${module})
+        else()
+            foreach(sub mqtt http websocket)
+                if(TARGET iot_${sub})
+                    list(PREPEND IOT_LINK_LIBS iot_${sub})
+                endif()
+            endforeach()
+        endif()
     endif()
 endforeach()
 
