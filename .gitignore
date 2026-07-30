@@ -1,0 +1,47 @@
+# Build outputs
+build/
+out/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Logs and data
+logs/
+data/
+*.log
+*.db
+
+# Flutter / Dart
+flutter/build/
+flutter/.dart_tool/
+flutter/.flutter-plugins
+flutter/.flutter-plugins-dependencies
+flutter/.packages
+flutter/pubspec.lock
+**/ios/Flutter/Flutter.podspec
+**/ios/Pods/
+**/android/.gradle/
+**/android/local.properties
+*.iml
+
+# Secrets / local config
+config.local.json
+.env
+certs/*.key
+certs/*.crt
+!certs/.gitkeep

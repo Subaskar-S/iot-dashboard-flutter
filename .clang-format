@@ -1,0 +1,94 @@
+# IoT Dashboard C++20 clang-format configuration
+#
+# C++20 formatting standards for Industrial IoT applications
+#
+# Run: clang-format -i <file>          (apply formatting)
+#      clang-format --dry-run <file>   (check only)
+
+# ─── Base style ─────────────────────────────────────────────────
+# Microsoft with modifications below
+BasedOnStyle: Microsoft
+
+# ─── Language Standard ──────────────────────────────────────────
+Standard: c++20
+
+# ─── Indentation ────────────────────────────────────────────────
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# ─── Column limit ───────────────────────────────────────────────
+ColumnLimit: 120
+
+# ─── Brace style ────────────────────────────────────────────────
+# Allman style - braces on their own line
+BreakBeforeBraces: Allman
+
+# ─── Short statements ───────────────────────────────────────────
+# Always use braces, never inline control statements
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Empty
+
+# ─── Spacing — parentheses ──────────────────────────────────────
+SpacesInParentheses: true
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: true
+
+# ─── Spacing — brackets & angles ────────────────────────────────
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+
+# ─── Pointer / reference alignment ──────────────────────────────
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# ─── Access modifiers ───────────────────────────────────────────
+AccessModifierOffset: 0
+
+# ─── Switch / case ──────────────────────────────────────────────
+IndentCaseLabels: true
+IndentCaseBlocks: false
+
+# ─── Namespaces ─────────────────────────────────────────────────
+NamespaceIndentation: All
+CompactNamespaces: false
+FixNamespaceComments: true
+
+# ─── Include ordering ───────────────────────────────────────────
+SortIncludes: true
+IncludeBlocks: Preserve
+
+# ─── Line wrapping — binary operators ───────────────────────────
+BreakBeforeBinaryOperators: None
+
+# ─── Line wrapping — function parameters ────────────────────────
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+# ─── Line wrapping — assignments ────────────────────────────────
+BreakBeforeTernaryOperators: true
+
+# ─── Constructor initializer lists ──────────────────────────────
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: BeforeComma
+
+# ─── Trailing comments ──────────────────────────────────────────
+SpacesBeforeTrailingComments: 1
+
+# ─── Empty lines ────────────────────────────────────────────────
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# ─── C++20 specific ─────────────────────────────────────────────
+# Concepts and requires clauses
+IndentRequiresClause: true
+RequiresClausePosition: OwnLine
+
+# Coroutines
+IndentGotoLabels: false
+
+# Modules
+SortUsingDeclarations: true
