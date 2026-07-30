@@ -15,12 +15,14 @@
  */
 
 #include "network/mqtt/mqtt_client.hpp"
+#include <boost/asio.hpp>
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
 
 namespace
 {
+    namespace asio = boost::asio;
     using namespace iot;
     using namespace iot::network::mqtt;
 
@@ -86,12 +88,37 @@ namespace
     }
 
     // -----------------------------------------------------------------------
-    // Integration tests — require mosquitto running on localhost:1883
-    // Run with: --gtest_also_run_disabled_tests
+    // Integration tests — require mosquitto on localhost:1883
+    // Skipped automatically when no broker is reachable.
     // -----------------------------------------------------------------------
 
-    TEST( MqttClientIntegrationTest, DISABLED_ConnectAndDisconnect )
+    /// Probe whether a TCP connection to localhost:1883 succeeds.
+    static bool BrokerReachable()
     {
+        try
+        {
+            asio::io_context ioc;
+            asio::ip::tcp::socket sock( ioc );
+            asio::ip::tcp::resolver resolver( ioc );
+            auto endpoints = resolver.resolve( "127.0.0.1", "1883" );
+            asio::connect( sock, endpoints );
+            return true;
+        }
+        catch ( ... )
+        {
+            return false;
+        }
+    }
+
+#define SKIP_IF_NO_BROKER()                                                                                            \
+    if ( !BrokerReachable() )                                                                                          \
+    {                                                                                                                  \
+        GTEST_SKIP() << "No MQTT broker on :1883";                                                                     \
+    }
+
+    TEST( MqttClientIntegrationTest, ConnectAndDisconnect )
+    {
+        SKIP_IF_NO_BROKER();
         MqttClient client( TestConfig() );
 
         auto connectResult = client.Connect();
@@ -103,8 +130,9 @@ namespace
         EXPECT_FALSE( client.IsConnected() );
     }
 
-    TEST( MqttClientIntegrationTest, DISABLED_SubscribeAndReceiveMessage )
+    TEST( MqttClientIntegrationTest, SubscribeAndReceiveMessage )
     {
+        SKIP_IF_NO_BROKER();
         // Publisher
         MqttClient publisher( TestConfig() );
         ASSERT_TRUE( publisher.Connect().has_value() );

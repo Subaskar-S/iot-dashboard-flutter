@@ -282,8 +282,38 @@ namespace
         return { res.result_int(), res.body() };
     }
 
-    TEST( HttpServerIntegrationTest, DISABLED_HealthEndpoint )
+    // -----------------------------------------------------------------------
+    // Integration test — real TCP, HttpServer
+    // Skipped automatically when port is already in use.
+    // -----------------------------------------------------------------------
+
+    static bool PortFree( uint16_t port )
     {
+        try
+        {
+            asio::io_context ioc;
+            asio::ip::tcp::acceptor a( ioc );
+            asio::ip::tcp::endpoint ep{ asio::ip::tcp::v4(), port };
+            a.open( ep.protocol() );
+            a.set_option( asio::socket_base::reuse_address( true ) );
+            a.bind( ep );
+            return true;
+        }
+        catch ( ... )
+        {
+            return false;
+        }
+    }
+
+#define SKIP_IF_PORT_BUSY( port )                                                                                      \
+    if ( !PortFree( port ) )                                                                                           \
+    {                                                                                                                  \
+        GTEST_SKIP() << "Port " #port " not free, skipping";                                                           \
+    }
+
+    TEST( HttpServerIntegrationTest, HealthEndpoint )
+    {
+        SKIP_IF_PORT_BUSY( 18080 );
         HttpServerConfig cfg;
         cfg.m_port = 18080;
         cfg.m_threadCount = 2;
@@ -304,8 +334,9 @@ namespace
         server.Stop();
     }
 
-    TEST( HttpServerIntegrationTest, DISABLED_NotFoundReturns404 )
+    TEST( HttpServerIntegrationTest, NotFoundReturns404 )
     {
+        SKIP_IF_PORT_BUSY( 18081 );
         HttpServerConfig cfg;
         cfg.m_port = 18081;
         cfg.m_threadCount = 2;

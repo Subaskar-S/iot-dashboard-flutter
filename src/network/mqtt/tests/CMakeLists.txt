@@ -4,6 +4,7 @@ add_executable(iot_mqtt_tests
 
 target_link_libraries(iot_mqtt_tests PRIVATE
     iot_mqtt
+    iot_http
     GTest::gtest
     GTest::gtest_main
 )
