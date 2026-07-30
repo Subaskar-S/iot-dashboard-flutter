@@ -7,10 +7,14 @@
  *   iot-dashboard --config <path> [options]
  */
 
-#include "api/server.hpp"
 #include "common/logging.hpp"
 #include <iostream>
 #include <string>
+
+// NOTE: api::Server wiring will be re-introduced once the api/ module
+// (composition root) is implemented. Until then, main() only parses
+// arguments and initializes logging so the build stays green while
+// modules are added incrementally (see CLAUDE.md).
 
 using namespace iot;
 
@@ -114,42 +118,12 @@ int main( int argc, char** argv )
     
     logger->info( "IoT Dashboard starting..." );
     logger->info( "HTTP port: {}, WebSocket port: {}", args.m_httpPort, args.m_wsPort );
-    
-    // Create server
-    api::Server::Config config;
-    config.m_serverConfig.m_httpPort = args.m_httpPort;
-    config.m_serverConfig.m_wsPort = args.m_wsPort;
-    config.m_databaseConfig.m_path = args.m_dbPath;
-    
-    if ( !args.m_mqttBroker.empty() )
-    {
-        config.m_mqttConfig.m_broker = args.m_mqttBroker;
-    }
-    
-    api::Server server( std::move( config ) );
-    
-    // Initialize
-    auto initResult = server.Initialize();
-    if ( !initResult )
-    {
-        logger->error( "Server initialization failed: {}", static_cast<int>( initResult.error() ) );
-        return 1;
-    }
-    
-    logger->info( "Server initialized successfully" );
-    
-    // Serve
+
     if ( args.m_serve )
     {
-        logger->info( "Starting server (press Ctrl+C to stop)..." );
-        auto serveResult = server.Serve();
-        if ( !serveResult )
-        {
-            logger->error( "Server error: {}", static_cast<int>( serveResult.error() ) );
-            return 1;
-        }
+        logger->warn( "Server composition root (api module) is not implemented yet" );
     }
-    
+
     logger->info( "IoT Dashboard exiting" );
     return 0;
 }

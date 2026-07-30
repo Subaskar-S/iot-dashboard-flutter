@@ -5,7 +5,11 @@ project(IoTDashboard VERSION 1.0.0 LANGUAGES CXX)
 # ============================================================================
 # Project configuration
 # ============================================================================
-set(CMAKE_CXX_STANDARD 20)
+# NOTE: std::expected (used throughout for Result<T> error handling) is only
+# exposed by libc++ in C++23 mode, not C++20. C++23 is a superset of C++20
+# feature-wise (concepts, ranges, coroutines all remain available), so the
+# project targets C++23 to get std::expected without a third-party polyfill.
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -51,7 +55,9 @@ endif()
 find_package(Threads REQUIRED)
 
 # Boost (ASIO, Beast for HTTP/WebSocket)
-find_package(Boost 1.75 REQUIRED COMPONENTS system thread)
+# NOTE: boost_system is header-only since Boost 1.69 and was removed as an
+# installable component in newer Boost releases, so only "thread" is linked.
+find_package(Boost 1.75 REQUIRED COMPONENTS thread)
 
 # JSON
 find_package(nlohmann_json 3.10 REQUIRED)

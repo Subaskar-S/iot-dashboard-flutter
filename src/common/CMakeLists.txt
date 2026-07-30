@@ -1,8 +1,6 @@
 add_library(iot_common STATIC
-    types.cpp
     error.cpp
     logging.cpp
-    config.cpp
 )
 
 target_include_directories(iot_common PUBLIC
@@ -17,7 +15,7 @@ target_link_libraries(iot_common PUBLIC
     Boost::boost
 )
 
-target_compile_features(iot_common PUBLIC cxx_std_20)
+target_compile_features(iot_common PUBLIC cxx_std_23)
 
 # Install
 install(TARGETS iot_common
