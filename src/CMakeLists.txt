@@ -3,7 +3,7 @@
 # Module subdirectories are added only when present so the build stays
 # green while modules are implemented incrementally (see CLAUDE.md).
 
-set(IOT_MODULES common core database network security device data analytics api)
+set(IOT_MODULES common core database network devices security data analytics api)
 set(IOT_LINK_LIBS Threads::Threads)
 
 foreach(module ${IOT_MODULES})
