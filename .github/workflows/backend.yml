@@ -46,6 +46,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y \
             cmake ninja-build \
+            clang-format \
             libboost-all-dev \
             nlohmann-json3-dev \
             libspdlog-dev \
@@ -61,7 +62,9 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install cmake ninja boost nlohmann-json spdlog fmt \
-            openssl sqlite googletest libpaho-mqtt mosquitto
+            openssl sqlite googletest libpaho-mqtt mosquitto llvm
+          # Add LLVM clang-format to PATH
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
 
       # ── Configure ─────────────────────────────────────────────────────
 
