@@ -50,31 +50,44 @@ namespace iot::network::http
             return;
         }
 
-        HttpRequest appReq = BeastToApp( m_beastReq );
-
-        // Handle pre-flight CORS immediately.
-        if ( m_enableCors && appReq.m_method == HttpMethod::OPTIONS )
+        // Wrap in try/catch so async handler never throws (would terminate).
+        try
         {
+            HttpRequest appReq = BeastToApp( m_beastReq );
+
+            // Handle pre-flight CORS immediately.
+            if ( m_enableCors && appReq.m_method == HttpMethod::OPTIONS )
+            {
+                HttpResponse appRes;
+                appRes.m_status = 204;
+                appRes.m_headers["access-control-allow-origin"] = "*";
+                appRes.m_headers["access-control-allow-methods"] =
+                    "GET,POST,PUT,DELETE,PATCH,OPTIONS";
+                appRes.m_headers["access-control-allow-headers"] = "Authorization,Content-Type";
+                SendResponse( std::move( appRes ) );
+                return;
+            }
+
             HttpResponse appRes;
-            appRes.m_status = 204;
-            appRes.m_headers["access-control-allow-origin"] = "*";
-            appRes.m_headers["access-control-allow-methods"] = "GET,POST,PUT,DELETE,PATCH,OPTIONS";
-            appRes.m_headers["access-control-allow-headers"] = "Authorization,Content-Type";
+            m_router.Dispatch( appReq, appRes );
+
+            if ( m_enableCors )
+            {
+                appRes.m_headers["access-control-allow-origin"] = "*";
+            }
+
+            m_logger->info( "{} {} -> {}", static_cast<int>( appReq.m_method ),
+                             appReq.m_path, appRes.m_status );
+
             SendResponse( std::move( appRes ) );
-            return;
         }
-
-        HttpResponse appRes;
-        m_router.Dispatch( appReq, appRes );
-
-        if ( m_enableCors )
+        catch ( const std::exception& e )
         {
-            appRes.m_headers["access-control-allow-origin"] = "*";
+            m_logger->error( "HTTP handler exception: {}", e.what() );
+            HttpResponse errRes;
+            errRes.Error( 500, "InternalError", "Internal server error" );
+            SendResponse( std::move( errRes ) );
         }
-
-        m_logger->info( "{} {} → {}", static_cast<int>( appReq.m_method ), appReq.m_path, appRes.m_status );
-
-        SendResponse( std::move( appRes ) );
     }
 
     void HttpSession::SendResponse( HttpResponse appRes )
