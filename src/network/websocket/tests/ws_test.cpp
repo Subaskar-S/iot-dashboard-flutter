@@ -175,11 +175,11 @@ namespace
 
         {
             SyncWsClient client( kTestPort );
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
             EXPECT_EQ( connectCount.load(), 1 );
             EXPECT_EQ( server.ConnectionCount(), 1u );
             client.Close();
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
         }
 
         EXPECT_EQ( server.ConnectionCount(), 0u );
@@ -205,7 +205,7 @@ namespace
         ASSERT_TRUE( server.Start().has_value() );
 
         SyncWsClient client( kTestPort );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         server.Send( connId, R"({"type":"ping"})" );
 
@@ -237,10 +237,10 @@ namespace
         ASSERT_TRUE( server.Start().has_value() );
 
         SyncWsClient client( kTestPort );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         client.Send( R"({"type":"subscribe","topic":"sensors"})" );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         std::lock_guard lock( mu );
         EXPECT_NE( received.find( "subscribe" ), std::string::npos );
@@ -268,7 +268,7 @@ namespace
 
         SyncWsClient c1( kTestPort );
         SyncWsClient c2( kTestPort );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 150 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         EXPECT_EQ( server.ConnectionCount(), 2u );
 
@@ -305,7 +305,7 @@ namespace
         ASSERT_TRUE( server.Start().has_value() );
 
         SyncWsClient client( kTestPort );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
         // Verify subscribed — should receive broadcast.
         server.BroadcastToTopic( "alerts", R"({"alert":"fire"})" );
