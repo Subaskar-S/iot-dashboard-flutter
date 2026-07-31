@@ -1,0 +1,53 @@
+name: iot_dashboard
+description: Production-grade Industrial IoT Dashboard
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^3.3.1
+  riverpod_annotation: ^4.0.2
+
+  # Navigation
+  go_router: ^17.3.0
+
+  # HTTP & WebSocket
+  dio: ^5.8.0+1
+  web_socket_channel: ^3.0.1
+
+  # Charts
+  fl_chart: ^1.2.0
+
+  # Storage
+  flutter_secure_storage: ^10.3.1
+  shared_preferences: ^2.3.3
+
+  # JSON
+  json_annotation: ^4.9.0
+
+  # UI utilities
+  intl: ^0.20.3
+  timeago: ^3.7.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  riverpod_generator: ^4.0.3
+  build_runner: ^2.4.14
+  json_serializable: ^6.9.0
+  mockito: ^5.4.5
+  build_verify: ^3.1.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
