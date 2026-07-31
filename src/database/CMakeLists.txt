@@ -11,6 +11,12 @@ target_include_directories(iot_database PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
+# SQLite3 target name changed in CMake 4.3: SQLite::SQLite3 → SQLite3::SQLite3
+# Support both by creating an alias when the new name isn't available.
+if(NOT TARGET SQLite3::SQLite3 AND TARGET SQLite::SQLite3)
+    add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
+endif()
+
 target_link_libraries(iot_database PUBLIC
     iot_core
     SQLite3::SQLite3

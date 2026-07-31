@@ -4,6 +4,7 @@
  */
 
 #include "security/jwt_handler.hpp"
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <thread>
 

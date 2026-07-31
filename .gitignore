@@ -20,9 +20,9 @@ CMakeFiles/
 # macOS
 .DS_Store
 
-# Logs and data
+# Logs and data (runtime directories at repo root only)
 logs/
-data/
+/data/
 *.log
 *.db
 
@@ -32,7 +32,7 @@ flutter/.dart_tool/
 flutter/.flutter-plugins
 flutter/.flutter-plugins-dependencies
 flutter/.packages
-flutter/pubspec.lock
+# pubspec.lock intentionally tracked for reproducible CI builds
 **/ios/Flutter/Flutter.podspec
 **/ios/Pods/
 **/android/.gradle/
