@@ -88,7 +88,12 @@ jobs:
       - name: Check formatting
         run: |
           find src -name "*.cpp" -o -name "*.hpp" | \
-            xargs clang-format --dry-run -Werror
+            xargs clang-format -i
+          # If clang-format changed anything, git diff will be non-empty.
+          if ! git diff --exit-code -- src/; then
+            echo "::error::clang-format violations detected. Run clang-format -i on modified files."
+            exit 1
+          fi
 
       # ── Start MQTT broker for integration tests ───────────────────────
 

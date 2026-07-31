@@ -8,6 +8,7 @@
 #define IOT_SECURITY_ACCESS_CONTROL_HPP
 
 #include "core/interfaces/i_authentication_service.hpp"
+#include <cstdint>
 #include <string_view>
 
 namespace iot::security
