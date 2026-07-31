@@ -122,7 +122,8 @@ jobs:
 
       - name: Run tests
         working-directory: build
-        run: ctest --output-on-failure --timeout 120
+        # Run serially (-j 1) to avoid port conflicts between integration tests
+        run: ctest --output-on-failure --timeout 120 -j 1
 
       # ── Upload test results ────────────────────────────────────────────
 
