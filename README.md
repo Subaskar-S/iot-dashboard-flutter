@@ -1,465 +1,269 @@
-# Production-Grade Industrial IoT Dashboard (C++20 + Flutter)
+# Production-Grade Industrial IoT Dashboard (C++23 + Flutter)
 
-A production-quality Industrial IoT monitoring and control dashboard built with modern C++20 backend and Flutter frontend, designed to professional engineering standards suitable for deployment in real-world industrial environments.
+A fully implemented Industrial IoT monitoring and control dashboard with a C++23 backend and Flutter multi-platform frontend. Built to production engineering standards (Clean Architecture, SOLID, RAII, zero raw owning pointers, 153 automated tests).
 
-## Architecture Overview
+## Architecture
 
 ```
-Flutter Desktop/Mobile
-        ↓
-REST API + WebSocket
-        ↓
-C++20 Backend Server
-        ↓
-MQTT Broker
-        ↓
-ESP32 / Raspberry Pi / IoT Devices
+Flutter Desktop/Mobile  (macOS · iOS · Android · Web)
+          ↓  HTTP REST + WebSocket
+  C++23 Backend Server
+          ↓  MQTT
+     MQTT Broker (Mosquitto / HiveMQ)
+          ↓
+  ESP32 / Raspberry Pi / IoT Devices
 ```
 
-## Engineering Standards
+## What Is Implemented
 
-**Core Principles:**
-- Clean Architecture with SOLID principles
-- Dependency Injection
-- Repository Pattern
-- Thread-safe, exception-safe code
-- Zero raw owning pointers (RAII + smart pointers)
-- Strong type safety with C++20 features
+### Backend (C++23, Boost.Beast, Paho MQTT, SQLite)
 
-**C++20 Features:**
-- Concepts for type constraints
-- Ranges and views
-- `std::expected` for error handling
-- `std::span` and `std::string_view`
-- Coroutines for async operations
-- `constexpr` and compile-time evaluation
-- Move semantics throughout
+| Module | Status | Tests |
+|--------|--------|-------|
+| `common` | ✅ | — |
+| `core` | ✅ | 11 |
+| `database` | ✅ | 13 |
+| `network/mqtt` | ✅ | 7 |
+| `network/http` | ✅ | 15 |
+| `network/websocket` | ✅ | 11 |
+| `devices` | ✅ | 20 |
+| `automation` | ✅ | 32 |
+| `security` | ✅ | 33 |
+| `api` | ✅ | 11 |
+| **Total** | | **153** |
 
-## Key Features
+### Flutter Frontend
 
-### Backend
-- **HTTP REST API**: Device management, sensor queries, command execution
-- **WebSocket**: Real-time bidirectional communication with live updates
-- **MQTT Integration**: Subscribe/publish with QoS, retained messages, auto-reconnect
-- **Device Management**: Track status, firmware, battery, capabilities, heartbeat
-- **Authentication**: JWT tokens, role-based access, password hashing, refresh tokens
-- **Automation Engine**: Rule-based automation (IF sensor > threshold THEN action)
-- **Database**: SQLite with repository pattern, migrations, versioning
-- **Logging**: Structured logging with spdlog, rotation, levels
-- **Metrics**: System monitoring, latency tracking, resource usage
-- **Configuration**: JSON-based with hot reload support
-
-### Frontend (Flutter)
-- **Dashboard**: Real-time charts and live sensor visualization
-- **Device Management**: Add, configure, monitor, and control devices
-- **Automation Editor**: Visual rule builder for IF-THEN automation
-- **Alerts**: Configurable thresholds and notifications
-- **User Management**: Role-based access control
-- **Settings**: System configuration and preferences
-- **Firmware Updates**: OTA update management
-- **System Logs**: Searchable audit trail
-- **Dark Mode**: Adaptive theming
-- **Multi-Platform**: Windows, macOS, Linux, iOS, Android
-
-## Module Architecture
-
-The backend is organized into independent, testable C++20 modules:
-
-| Module | Purpose |
-|--------|---------|
-| `core` | Core types, interfaces, abstractions |
-| `network/http` | HTTP server with REST endpoints |
-| `network/websocket` | WebSocket server for real-time communication |
-| `network/mqtt` | MQTT client with pub/sub abstraction |
-| `database` | SQLite repository pattern implementation |
-| `devices` | Device registry, tracking, and management |
-| `automation` | Rule engine for automated responses |
-| `security` | JWT auth, password hashing, access control |
-| `logging` | Structured logging infrastructure |
-| `config` | Configuration management and hot reload |
-| `api` | API composition root and routing |
-| `metrics` | System metrics and monitoring |
-| `storage` | Time-series data storage and retrieval |
-| `utils` | Shared utilities and helpers |
-
-## Technology Stack
-
-### Backend
-- **Language**: C++20
-- **Build System**: CMake 3.20+ with Ninja
-- **Networking**: Boost.Asio, Boost.Beast / websocketpp
-- **MQTT**: Eclipse Paho MQTT C++
-- **Database**: SQLite3 with modern C++ wrapper
-- **JSON**: nlohmann/json
-- **Logging**: spdlog with fmt
-- **Testing**: GoogleTest + GMock
-- **Security**: OpenSSL for TLS/JWT
-- **Standards**: RAII, Smart Pointers, Dependency Injection, Clean Architecture
-
-### Frontend
-- **Framework**: Flutter 3.16+
-- **State Management**: Riverpod
-- **HTTP Client**: Dio
-- **WebSocket**: web_socket_channel
-- **Charts**: fl_chart
-- **Navigation**: go_router
-- **Architecture**: Clean Architecture (presentation/domain/data layers)
+| Feature | Status |
+|---------|--------|
+| Login (JWT Bearer auth) | ✅ |
+| Dashboard (live device status) | ✅ |
+| Devices (register/delete/command) | ✅ |
+| Sensors (live charts via WebSocket) | ✅ |
+| Automation (IF-THEN rule builder) | ✅ |
+| Settings (server config, dark mode) | ✅ |
+| NavigationRail desktop layout | ✅ |
+| Dark / Light mode | ✅ |
 
 ## Quick Start
 
-```bash
-# Build Backend
-mkdir -p build/$(uname)/Debug
-cd build/$(uname)/Debug
-cmake ../.. -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
-ninja
-
-# Run Backend
-./iot-dashboard --config config.json --serve
-
-# Run Flutter (separate terminal)
-cd flutter
-flutter run -d macos  # or windows, linux, ios, android
-```
-
-## Backend API
-
-### HTTP REST Endpoints
-
-```
-GET    /health              Health check
-GET    /devices             List all devices
-POST   /devices             Register new device
-DELETE /devices/{id}        Remove device
-GET    /sensors             Query sensor data
-GET    /sensors/history     Historical data
-POST   /commands            Send device command
-GET    /metrics             System metrics
-POST   /auth/login          Authenticate user
-POST   /auth/refresh        Refresh JWT token
-GET    /automation/rules    List automation rules
-POST   /automation/rules    Create automation rule
-```
-
-### WebSocket Events
-
-```
-→ subscribe:sensors         Subscribe to sensor updates
-← sensor:data               Real-time sensor reading
-→ command:execute           Execute device command
-← device:status             Device status change
-→ heartbeat                 Keep-alive ping
-← heartbeat:ack             Keep-alive response
-```
-
-### MQTT Topics
-
-```
-devices/{id}/status         Device online/offline status
-devices/{id}/sensors        Sensor readings
-devices/{id}/commands       Command messages
-devices/{id}/heartbeat      Device health check
-devices/{id}/firmware       OTA update messages
-```
-
-## Building
-
-Builds use Ninja + CMake from platform-specific directories under `build/`.
-
 ### Prerequisites
 
-- CMake 3.20+
-- Ninja
-- C++20 compiler (clang++14+ or g++11+)
-- Flutter SDK 3.16+ (for frontend)
-
-### Build Pattern
-
+**macOS:**
 ```bash
-cd build/<Platform>/<BuildType>   # e.g. build/OSX/Debug
-cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=<BuildType>
-ninja
+brew install cmake ninja boost nlohmann-json spdlog fmt openssl sqlite3 libpaho-mqtt mosquitto
+flutter sdk  # https://flutter.dev/docs/get-started/install
 ```
 
-Platforms: `OSX`, `Linux`, `Windows`, `Android`, `iOS`
-Build types: `Debug`, `Release`, `RelWithDebInfo`
+**Ubuntu/Debian:**
+```bash
+sudo apt install cmake ninja-build libboost-all-dev nlohmann-json3-dev \
+    libspdlog-dev libfmt-dev libssl-dev libsqlite3-dev libpaho-mqtt-dev
+# Install Flutter: https://flutter.dev/docs/get-started/install/linux
+```
 
-## Testing
+### 1. Build the Backend
 
 ```bash
-cd build/OSX/Debug
-ninja test
+mkdir -p build/OSX/Debug && cd build/OSX/Debug
+cmake ../../.. -G Ninja -DCMAKE_BUILD_TYPE=Debug
+ninja
+ctest --output-on-failure   # 153 tests
+```
+
+### 2. Start MQTT Broker
+
+```bash
+# macOS
+brew services start mosquitto
+
+# Linux
+sudo systemctl start mosquitto
+```
+
+### 3. Run the Backend
+
+```bash
+./src/iot-dashboard --serve --db ./iot.db
+# HTTP API: http://localhost:8080
+# WebSocket: ws://localhost:8081
+```
+
+### 4. Run Flutter
+
+```bash
+cd flutter
+flutter pub get
+flutter run -d macos   # or: ios, android, chrome
+```
+
+### 5. Login
+
+Default credentials (change in production):
+- **Username:** `admin`
+- **Password:** `admin123`
+
+## HTTP API
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health` | — | Health check + uptime |
+| POST | `/auth/login` | — | Login → JWT tokens |
+| POST | `/auth/refresh` | — | Refresh access token |
+| POST | `/auth/logout` | Bearer | Revoke token |
+| GET | `/devices` | Bearer | List devices |
+| POST | `/devices` | Bearer | Register device |
+| DELETE | `/devices?id=` | Bearer | Unregister device |
+| POST | `/commands` | Bearer | Send device command |
+| GET | `/sensors` | Bearer | Query sensor history |
+| GET | `/automation/rules` | Bearer | List rules |
+| POST | `/automation/rules` | Bearer | Create rule |
+| DELETE | `/automation/rules?id=` | Bearer | Delete rule |
+| GET | `/metrics` | Bearer | System metrics |
+
+## WebSocket Protocol
+
+Connect to `ws://localhost:8081` after login:
+
+```json
+// Subscribe to live sensor updates
+{ "type": "subscribe", "topic": "sensors" }
+
+// Server pushes sensor data
+{ "type": "sensor_data", "data": { "device_id": "temp-001", "value": 25.5 } }
+
+// Server pushes device status
+{ "type": "device_status", "data": { "device_id": "temp-001", "online": true } }
+
+// Ping/pong heartbeat
+{ "type": "ping" } → { "type": "pong" }
+```
+
+## MQTT Topics
+
+```
+devices/{id}/status       → backend  (device online/offline)
+devices/{id}/sensors      → backend  (sensor readings)
+devices/{id}/heartbeat    → backend  (keep-alive)
+devices/{id}/commands     ← backend  (commands to device)
 ```
 
 ## Project Structure
 
 ```
-IoT-Dashboard-Template/
+iot-dashboard-flutter/
 ├── src/
-│   ├── main.cpp                    # CLI entry point
-│   ├── core/                       # Core types and interfaces
-│   │   ├── include/
-│   │   ├── src/
+│   ├── main.cpp
+│   ├── common/             # Error codes, logging, types
+│   ├── core/               # Domain interfaces (ports)
+│   │   ├── concepts.hpp
+│   │   ├── interfaces/     # IDeviceRepository, IMqttClient, ...
 │   │   └── tests/
-│   ├── network/                    # Network layer
-│   │   ├── http/                   # HTTP server
-│   │   ├── websocket/              # WebSocket server
-│   │   └── mqtt/                   # MQTT client
-│   ├── database/                   # Database layer
-│   │   ├── repositories/           # Repository pattern
-│   │   ├── migrations/             # Schema migrations
+│   ├── database/           # SQLite: connection, migrations, repos
 │   │   └── tests/
-│   ├── devices/                    # Device management
-│   │   ├── registry.hpp            # Device registry
-│   │   ├── heartbeat.hpp           # Heartbeat monitoring
-│   │   └── tests/
-│   ├── automation/                 # Rule engine
-│   │   ├── rule_engine.hpp         # IF-THEN rule processor
-│   │   ├── condition_evaluator.hpp # Condition evaluation
-│   │   └── tests/
-│   ├── security/                   # Authentication & authorization
-│   │   ├── jwt_handler.hpp         # JWT token management
-│   │   ├── password_hash.hpp       # Password hashing
-│   │   ├── rbac.hpp                # Role-based access control
-│   │   └── tests/
-│   ├── logging/                    # Logging infrastructure
-│   ├── config/                     # Configuration management
-│   ├── api/                        # API composition
-│   ├── metrics/                    # System metrics
-│   ├── storage/                    # Time-series storage
-│   ├── utils/                      # Utilities
-│   └── common/                     # Shared code
-│       ├── types.hpp
-│       ├── error.hpp
-│       └── logging.hpp
-├── flutter/                        # Flutter frontend
-│   ├── lib/
-│   │   ├── main.dart
-│   │   ├── core/                   # Core utilities
-│   │   ├── features/               # Feature modules
-│   │   │   ├── dashboard/
-│   │   │   ├── devices/
-│   │   │   ├── automation/
-│   │   │   ├── alerts/
-│   │   │   ├── settings/
-│   │   │   └── auth/
-│   │   ├── data/                   # Data layer
-│   │   ├── domain/                 # Domain layer
-│   │   └── presentation/           # Presentation layer
-│   └── test/
-├── test/                           # Backend integration tests
-├── build/                          # Platform-specific builds
-│   ├── OSX/
-│   ├── Linux/
-│   ├── Windows/
-│   └── Docker/
-├── cmake/                          # CMake modules
-├── docs/                           # Documentation
+│   ├── network/
+│   │   ├── http/           # Boost.Beast HTTP server + router
+│   │   ├── websocket/      # Boost.Beast WS server + pub/sub
+│   │   └── mqtt/           # Paho C async MQTT client
+│   ├── devices/            # DeviceManager + HeartbeatMonitor
+│   ├── automation/         # ConditionEvaluator + RuleEngine
+│   ├── security/           # PBKDF2, HS256 JWT, RBAC
+│   └── api/                # Composition root + controllers
+│       ├── application.cpp
+│       ├── middleware/
+│       └── controllers/
+├── flutter/
+│   └── lib/
+│       ├── core/           # Theme, constants, Result<T>
+│       ├── domain/         # Entities + repository interfaces
+│       ├── data/           # Dio, WebSocket, repository impls
+│       └── presentation/
+│           ├── providers/  # Riverpod notifiers
+│           ├── pages/      # Login, Dashboard, Devices, ...
+│           └── widgets/
+├── cmake/
+├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── API.md
 │   ├── DEVELOPMENT.md
-│   ├── DEPLOYMENT.md
-│   └── diagrams/
-├── scripts/                        # Build and deployment scripts
-│   ├── build.sh
-│   ├── test.sh
-│   └── deploy.sh
-├── .github/
-│   └── workflows/                  # CI/CD pipelines
-│       ├── build.yml
-│       ├── test.yml
-│       └── lint.yml
+│   └── DEPLOYMENT.md
 ├── CMakeLists.txt
-├── CLAUDE.md                       # Development guide
-├── README.md
-└── config.json                     # Configuration template
+├── CLAUDE.md
+└── QUICK_START.md
 ```
 
-## Configuration
+## Technology Stack
 
-Example `config.json`:
+### Backend
+
+| Concern | Library / Tool |
+|---------|---------------|
+| Language | C++23 |
+| Build | CMake 3.20+ + Ninja |
+| HTTP/WebSocket | Boost.Beast (Boost.Asio) |
+| MQTT | Eclipse Paho MQTT C (async) |
+| Database | SQLite3 (WAL mode) |
+| JSON | nlohmann/json |
+| Logging | spdlog + fmt |
+| Security | OpenSSL (PBKDF2, HMAC-SHA256) |
+| Testing | GoogleTest + GMock |
+
+### Frontend
+
+| Concern | Package |
+|---------|---------|
+| Framework | Flutter 3.41+ |
+| State | flutter_riverpod |
+| Navigation | go_router |
+| HTTP | dio |
+| WebSocket | web_socket_channel |
+| Charts | fl_chart |
+| Storage | flutter_secure_storage |
+
+## Security
+
+- **Passwords**: PBKDF2-SHA256 (600,000 iterations, random 16-byte salt)
+- **Tokens**: HS256 JWT (access: 1h, refresh: 30d)
+- **RBAC**: Admin / Operator / Viewer roles
+- **Transport**: TLS support via OpenSSL (configure in AppConfig)
+- **Constant-time compare**: `CRYPTO_memcmp` throughout
+
+## Automation Example
+
+IF temperature > 30°C → turn on fan:
 
 ```json
 {
-  "server": {
-    "http_port": 8080,
-    "ws_port": 8081,
-    "host": "0.0.0.0",
-    "max_connections": 1000,
-    "thread_pool_size": 8,
-    "enable_cors": true,
-    "request_timeout_ms": 30000
-  },
-  "database": {
-    "path": "./data/iot.db",
-    "backup_path": "./data/backups/",
-    "retention_days": 90,
-    "enable_wal": true,
-    "auto_vacuum": true
-  },
-  "mqtt": {
-    "broker": "mqtt://localhost:1883",
-    "client_id": "iot-dashboard-backend",
-    "username": "",
-    "password": "",
-    "qos": 1,
-    "keep_alive_seconds": 60,
-    "clean_session": false,
-    "reconnect_delay_ms": 5000,
-    "max_reconnect_attempts": -1
-  },
-  "security": {
-    "enable_tls": true,
-    "tls_cert": "./certs/server.crt",
-    "tls_key": "./certs/server.key",
-    "ca_cert": "./certs/ca.crt",
-    "jwt_secret": "your-secret-key-change-in-production",
-    "jwt_expiry_hours": 24,
-    "refresh_token_expiry_days": 30,
-    "password_min_length": 8,
-    "bcrypt_rounds": 12
-  },
-  "logging": {
-    "level": "info",
-    "file_path": "./logs/iot-dashboard.log",
-    "max_file_size_mb": 100,
-    "max_files": 10,
-    "console_output": true,
-    "enable_json": false
-  },
-  "devices": {
-    "heartbeat_timeout_seconds": 300,
-    "cleanup_interval_seconds": 3600,
-    "max_offline_retention_days": 30
-  },
-  "automation": {
-    "enable": true,
-    "evaluation_interval_ms": 1000,
-    "max_rules": 1000,
-    "max_actions_per_rule": 10
-  },
-  "metrics": {
-    "enable": true,
-    "collection_interval_seconds": 60,
-    "retention_hours": 168
-  }
+  "id": "rule-001",
+  "name": "High Temperature",
+  "enabled": true,
+  "conditions": [{ "sensor_type": "temperature", "operator": ">", "threshold": 30.0 }],
+  "actions": [{ "device_id": "fan-001", "command": "turn_on", "parameters": {} }]
 }
 ```
 
-## Development Workflow
-
-### Incremental Module Development
-
-This project follows an incremental, test-driven approach:
-
-1. **Design**: Architect the module interfaces and dependencies
-2. **Implement**: Write production code with RAII and modern C++20
-3. **Test**: Achieve >90% code coverage with GoogleTest
-4. **Review**: Run clang-format, clang-tidy, and sanitizers
-5. **Document**: Update architecture diagrams and API docs
-6. **Integrate**: Merge and verify integration tests pass
-
-### Code Quality Standards
+## Testing
 
 ```bash
-# Format code
-find src -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
+# C++ tests (from build dir)
+ctest --output-on-failure
+# → 153 tests, 0 failures
 
-# Static analysis
-clang-tidy src/**/*.cpp -- -std=c++20
+# Flutter analysis
+cd flutter && flutter analyze
+# → 0 errors
 
-# Run tests with coverage
-cd build/OSX/Debug
-cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
-ninja
-ninja test
-ninja coverage
-
-# Run sanitizers
-cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DENABLE_ASAN=ON -DENABLE_UBSAN=ON
-ninja
-ninja test
+# Flutter build check
+flutter build macos --debug
 ```
-
-### Testing Strategy
-
-- **Unit Tests**: Test individual classes in isolation with mocks
-- **Integration Tests**: Test module interactions (e.g., API → Database)
-- **End-to-End Tests**: Test full workflows (HTTP request → MQTT → Device)
-- **Performance Tests**: Benchmark critical paths (WebSocket throughput, MQTT latency)
-- **Thread Safety Tests**: Concurrent access validation with ThreadSanitizer
-
-### CI/CD Pipeline
-
-GitHub Actions workflow:
-1. Build on Linux, macOS, Windows
-2. Run all tests with sanitizers
-3. Check code formatting (clang-format)
-4. Run static analysis (clang-tidy)
-5. Generate coverage report
-6. Build Flutter apps
-7. Deploy documentation
 
 ## Documentation
 
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**: System design and module interactions
-- **[API.md](docs/API.md)**: Complete API reference with examples
-- **[DEVELOPMENT.md](docs/DEVELOPMENT.md)**: Coding standards and guidelines
-- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Production deployment guide
-- **[CLAUDE.md](CLAUDE.md)**: AI-assisted development rules
-
-## Roadmap
-
-### Phase 1: Core Infrastructure ✓
-- [x] Project structure and build system
-- [x] Core types and error handling
-- [x] Logging infrastructure
-- [x] Configuration management
-
-### Phase 2: Networking (In Progress)
-- [ ] HTTP server with REST API
-- [ ] WebSocket server with real-time updates
-- [ ] MQTT client with pub/sub
-- [ ] Connection pooling and retry logic
-
-### Phase 3: Data Layer
-- [ ] SQLite integration
-- [ ] Repository pattern implementation
-- [ ] Database migrations
-- [ ] Time-series data optimization
-
-### Phase 4: Business Logic
-- [ ] Device registry and management
-- [ ] Heartbeat monitoring
-- [ ] Automation rule engine
-- [ ] Alert system
-
-### Phase 5: Security
-- [ ] JWT authentication
-- [ ] Password hashing (bcrypt)
-- [ ] Role-based access control
-- [ ] TLS/SSL support
-
-### Phase 6: Flutter Frontend
-- [ ] Dashboard with live charts
-- [ ] Device management UI
-- [ ] Automation editor
-- [ ] User management
-
-### Phase 7: Production Readiness
-- [ ] Performance optimization
-- [ ] Load testing
-- [ ] Production deployment guide
-- [ ] Monitoring and alerting
-
-## Contributing
-
-This is a production-grade reference implementation. Contributions should:
-- Follow SOLID principles and Clean Architecture
-- Include comprehensive tests (>90% coverage)
-- Pass all static analysis checks
-- Include documentation updates
-- Follow the existing code style
+- [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) — Module design, data flows, DB schema
+- [**API.md**](docs/API.md) — Full REST + WebSocket + MQTT reference
+- [**DEVELOPMENT.md**](docs/DEVELOPMENT.md) — Coding standards, adding modules
+- [**DEPLOYMENT.md**](docs/DEPLOYMENT.md) — Production deployment (Docker, systemd)
+- [**CLAUDE.md**](CLAUDE.md) — AI-assisted development rules
 
 ## License
 
@@ -467,7 +271,6 @@ MIT License
 
 ---
 
-**Status**: Active Development  
-**Engineering Level**: Production-Grade  
-**Standards**: Microsoft/Google/NVIDIA-level code quality  
-**Built with**: Modern C++20, Flutter, Clean Architecture, SOLID principles
+**Status**: Complete v1.0  
+**Tests**: 153 C++ (passing) · 0 Flutter errors  
+**Platforms**: macOS · Linux · Windows (backend) · macOS · iOS · Android · Web (Flutter)

@@ -1,120 +1,138 @@
-# Quick Start Guide
+# Quick Start
 
-## 1. Copy Template
+## macOS — Full Stack in 5 Minutes
 
-```bash
-cp -r IoT-Dashboard-Template ~/my-iot-project
-cd ~/my-iot-project
-```
-
-## 2. Customize Project Name
-
-Edit `CMakeLists.txt` (line 3):
-```cmake
-project(MyIoTProject VERSION 1.0.0 LANGUAGES CXX)
-```
-
-## 3. Install Dependencies
-
-### macOS
-```bash
-brew install cmake ninja boost nlohmann-json spdlog fmt openssl sqlite3
-```
-
-### Linux (Ubuntu/Debian)
-```bash
-sudo apt install cmake ninja-build libboost-all-dev \
-    nlohmann-json3-dev libspdlog-dev libfmt-dev \
-    libssl-dev libsqlite3-dev
-```
-
-## 4. Build
+### 1. Install Dependencies
 
 ```bash
-mkdir -p build/$(uname)/Debug
-cd build/$(uname)/Debug
-cmake ../.. -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
+brew install cmake ninja boost nlohmann-json spdlog fmt openssl sqlite3 libpaho-mqtt mosquitto
+```
+
+### 2. Build the Backend
+
+```bash
+mkdir -p build/OSX/Debug && cd build/OSX/Debug
+cmake ../../.. -G Ninja -DCMAKE_BUILD_TYPE=Debug
 ninja
+ctest --output-on-failure   # must show 153 passed
 ```
 
-## 5. Run
+### 3. Start MQTT Broker
 
 ```bash
-./iot-dashboard --help
-./iot-dashboard --serve --verbose
+brew services start mosquitto
+# or run manually:
+/opt/homebrew/sbin/mosquitto -c /opt/homebrew/etc/mosquitto/mosquitto.conf
 ```
 
-## Code Style Quick Reference
-
-### Naming
-```cpp
-class DeviceManager {};           // PascalCase
-void ProcessData() {};            // PascalCase
-int deviceCount;                  // camelCase
-constexpr int kMaxSize = 100;    // kCamelCase
-std::string m_deviceId;           // m_ prefix for members
-```
-
-### Braces
-```cpp
-if ( condition )
-{
-    DoSomething();
-}
-```
-
-### Spacing
-```cpp
-if ( x > 0 && y < 100 )           // Spaces inside parentheses
-for ( auto& item : items )
-```
-
-### Error Handling
-```cpp
-Result<Data> GetData( const std::string& id )
-{
-    if ( id.empty() )
-        return std::unexpected( Error::InvalidInput );
-    return data;
-}
-```
-
-### Logging
-```cpp
-auto logger = CreateLogger( "MyModule" );
-logger->info( "Device connected: id={}", deviceId );
-```
-
-## Format Code
+### 4. Start the Backend
 
 ```bash
-# Format all files
-find src -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
-
-# Check formatting
-clang-format --dry-run src/main.cpp
+# From build/OSX/Debug
+./src/iot-dashboard --serve --db ./iot.db
 ```
 
-## Add a New Module
+Backend is now running:
+- REST API → `http://localhost:8080`
+- WebSocket → `ws://localhost:8081`
 
-1. Create directory: `src/mymodule/`
+### 5. Run the Flutter App
+
+```bash
+cd flutter
+flutter pub get
+flutter run -d macos
+```
+
+Login with `admin` / `admin123`.
+
+---
+
+## Linux (Ubuntu/Debian)
+
+```bash
+sudo apt install cmake ninja-build libboost-all-dev nlohmann-json3-dev \
+    libspdlog-dev libfmt-dev libssl-dev libsqlite3-dev \
+    libpaho-mqtt-dev mosquitto mosquitto-clients
+
+mkdir -p build/Linux/Debug && cd build/Linux/Debug
+cmake ../../.. -G Ninja -DCMAKE_BUILD_TYPE=Debug
+ninja
+./src/iot-dashboard --serve --db ./iot.db
+```
+
+---
+
+## CLI Reference
+
+```
+./iot-dashboard [options]
+
+  --serve              Start HTTP + WebSocket server (blocking)
+  --db <path>          SQLite database file (default: ./data/iot.db)
+  --mqtt-broker <url>  MQTT broker URL (default: tcp://localhost:1883)
+  --port <n>           HTTP port (default: 8080)
+  --ws-port <n>        WebSocket port (default: 8081)
+  --log-level <level>  trace|debug|info|warn|error (default: info)
+  --verbose            Shorthand for --log-level debug
+  --help               Show this help
+```
+
+---
+
+## Quick API Test
+
+```bash
+# Health check (no auth)
+curl http://localhost:8080/health
+
+# Login
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | python3 -m json.tool | grep access_token | awk -F'"' '{print $4}')
+
+# Register a device
+curl -s -X POST http://localhost:8080/devices \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"temp-001","name":"Temperature Sensor","type":"sensor","protocol":"mqtt"}'
+
+# List devices
+curl -s http://localhost:8080/devices \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+---
+
+## Add a New Backend Module
+
+1. Create `src/mymodule/`
 2. Add `CMakeLists.txt`:
    ```cmake
    add_library(iot_mymodule STATIC mycomponent.cpp)
-   target_link_libraries(iot_mymodule PUBLIC iot_common)
-   target_compile_features(iot_mymodule PUBLIC cxx_std_20)
+   target_link_libraries(iot_mymodule PUBLIC iot_core)
+   target_compile_features(iot_mymodule PUBLIC cxx_std_23)
+   if(BUILD_TESTING)
+       add_subdirectory(tests)
+   endif()
    ```
-3. Add to `src/CMakeLists.txt`:
-   ```cmake
-   add_subdirectory(mymodule)
-   ```
-4. Link from main:
-   ```cmake
-   target_link_libraries(iot-dashboard PRIVATE iot_mymodule)
-   ```
+3. Add `mymodule` to `IOT_MODULES` in `src/CMakeLists.txt`
+4. Write tests in `src/mymodule/tests/`
 
-## Complete Documentation
+## Code Formatting
 
-- **PROJECT_TEMPLATE_GUIDE.md** — Full usage guide
-- **docs/DEVELOPMENT.md** — Coding standards
-- **README.md** — Project overview
+```bash
+# Format all C++ files
+find src -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
+
+# Check only (CI)
+find src -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run -Werror
+```
+
+## Further Reading
+
+- [**README.md**](README.md) — Full project overview
+- [**docs/ARCHITECTURE.md**](docs/ARCHITECTURE.md) — Module design
+- [**docs/API.md**](docs/API.md) — API reference
+- [**docs/DEVELOPMENT.md**](docs/DEVELOPMENT.md) — Coding standards
+- [**docs/DEPLOYMENT.md**](docs/DEPLOYMENT.md) — Production deployment
