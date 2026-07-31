@@ -83,7 +83,7 @@ namespace iot::network::http
         }
         catch ( const std::exception& e )
         {
-            m_logger->error( "HTTP handler exception: {}", e.what() );
+            m_logger->error( "HTTP handler exception [{}]: {}", typeid( e ).name(), e.what() );
             HttpResponse errRes;
             errRes.Error( 500, "InternalError", "Internal server error" );
             SendResponse( std::move( errRes ) );
@@ -189,11 +189,23 @@ namespace iot::network::http
                                                                  unsigned httpVersion,
                                                                  bool keepAlive )
     {
-        bhttp::response<bhttp::string_body> res{ static_cast<bhttp::status>( appRes.m_status ), httpVersion };
+        // Clamp httpVersion to valid HTTP/1.x values
+        if ( httpVersion != 10 && httpVersion != 11 )
+        {
+            httpVersion = 11;
+        }
+
+        bhttp::response<bhttp::string_body> res{
+            static_cast<bhttp::status>( appRes.m_status ), httpVersion
+        };
 
         for ( const auto& [key, value] : appRes.m_headers )
         {
-            res.set( key, value );
+            // Skip empty keys — Beast throws on empty field name
+            if ( !key.empty() )
+            {
+                res.set( key, value );
+            }
         }
 
         res.keep_alive( keepAlive );
