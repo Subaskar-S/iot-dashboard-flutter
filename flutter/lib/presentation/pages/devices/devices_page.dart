@@ -72,8 +72,8 @@ class _DeviceTile extends StatelessWidget {
         child: ListTile(
           leading: CircleAvatar(
             backgroundColor: device.online
-                ? AppTheme.statusOnline(isDark).withOpacity(0.15)
-                : Colors.grey.withOpacity(0.15),
+                ? AppTheme.statusOnline(isDark).withValues(alpha: 0.15)
+                : Colors.grey.withValues(alpha: 0.15),
             child: Icon(Icons.sensors,
                 color: device.online
                     ? AppTheme.statusOnline(isDark)
@@ -98,8 +98,8 @@ class _DeviceTile extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: device.online
-                      ? AppTheme.statusOnline(isDark).withOpacity(0.15)
-                      : Colors.grey.withOpacity(0.15),
+                      ? AppTheme.statusOnline(isDark).withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

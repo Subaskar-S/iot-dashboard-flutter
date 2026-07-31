@@ -128,6 +128,14 @@ namespace iot::api
         std::unique_ptr<network::http::HttpServer> m_httpServer;
         std::unique_ptr<network::websocket::WsServer> m_wsServer;
 
+        // HTTP Controllers (must outlive the HTTP server)
+        std::unique_ptr<HealthController> m_healthController;
+        std::unique_ptr<AuthController> m_authController;
+        std::unique_ptr<DeviceController> m_deviceController;
+        std::unique_ptr<SensorController> m_sensorController;
+        std::unique_ptr<AutomationController> m_automationController;
+        std::unique_ptr<MetricsController> m_metricsController;
+
         std::atomic<bool> m_running{ false };
 
         void RegisterHttpRoutes();

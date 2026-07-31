@@ -50,31 +50,44 @@ namespace iot::network::http
             return;
         }
 
-        HttpRequest appReq = BeastToApp( m_beastReq );
-
-        // Handle pre-flight CORS immediately.
-        if ( m_enableCors && appReq.m_method == HttpMethod::OPTIONS )
+        // Wrap in try/catch so async handler never throws (would terminate).
+        try
         {
+            HttpRequest appReq = BeastToApp( m_beastReq );
+
+            // Handle pre-flight CORS immediately.
+            if ( m_enableCors && appReq.m_method == HttpMethod::OPTIONS )
+            {
+                HttpResponse appRes;
+                appRes.m_status = 204;
+                appRes.m_headers["access-control-allow-origin"] = "*";
+                appRes.m_headers["access-control-allow-methods"] =
+                    "GET,POST,PUT,DELETE,PATCH,OPTIONS";
+                appRes.m_headers["access-control-allow-headers"] = "Authorization,Content-Type";
+                SendResponse( std::move( appRes ) );
+                return;
+            }
+
             HttpResponse appRes;
-            appRes.m_status = 204;
-            appRes.m_headers["access-control-allow-origin"] = "*";
-            appRes.m_headers["access-control-allow-methods"] = "GET,POST,PUT,DELETE,PATCH,OPTIONS";
-            appRes.m_headers["access-control-allow-headers"] = "Authorization,Content-Type";
+            m_router.Dispatch( appReq, appRes );
+
+            if ( m_enableCors )
+            {
+                appRes.m_headers["access-control-allow-origin"] = "*";
+            }
+
+            m_logger->info( "{} {} -> {}", static_cast<int>( appReq.m_method ),
+                             appReq.m_path, appRes.m_status );
+
             SendResponse( std::move( appRes ) );
-            return;
         }
-
-        HttpResponse appRes;
-        m_router.Dispatch( appReq, appRes );
-
-        if ( m_enableCors )
+        catch ( const std::exception& e )
         {
-            appRes.m_headers["access-control-allow-origin"] = "*";
+            m_logger->error( "HTTP handler exception [{}]: {}", typeid( e ).name(), e.what() );
+            HttpResponse errRes;
+            errRes.Error( 500, "InternalError", "Internal server error" );
+            SendResponse( std::move( errRes ) );
         }
-
-        m_logger->info( "{} {} → {}", static_cast<int>( appReq.m_method ), appReq.m_path, appRes.m_status );
-
-        SendResponse( std::move( appRes ) );
     }
 
     void HttpSession::SendResponse( HttpResponse appRes )
@@ -176,11 +189,23 @@ namespace iot::network::http
                                                                  unsigned httpVersion,
                                                                  bool keepAlive )
     {
-        bhttp::response<bhttp::string_body> res{ static_cast<bhttp::status>( appRes.m_status ), httpVersion };
+        // Clamp httpVersion to valid HTTP/1.x values
+        if ( httpVersion != 10 && httpVersion != 11 )
+        {
+            httpVersion = 11;
+        }
+
+        bhttp::response<bhttp::string_body> res{
+            static_cast<bhttp::status>( appRes.m_status ), httpVersion
+        };
 
         for ( const auto& [key, value] : appRes.m_headers )
         {
-            res.set( key, value );
+            // Skip empty keys — Beast throws on empty field name
+            if ( !key.empty() )
+            {
+                res.set( key, value );
+            }
         }
 
         res.keep_alive( keepAlive );

@@ -112,7 +112,7 @@ namespace iot::api
         }
         else
         {
-            m_logger->warn( "MQTT broker not reachable — running without MQTT" );
+            m_logger->warn( "MQTT broker not reachable - running without MQTT" );
         }
 
         // Start heartbeat monitor.
@@ -135,7 +135,7 @@ namespace iot::api
         }
 
         m_running = true;
-        m_logger->info( "IoT Dashboard running — HTTP:{} WS:{}", m_config.m_httpPort, m_config.m_wsPort );
+        m_logger->info( "IoT Dashboard running - HTTP:{} WS:{}", m_config.m_httpPort, m_config.m_wsPort );
         return {};
     }
 
@@ -162,23 +162,25 @@ namespace iot::api
     {
         auto& router = m_httpServer->Router();
 
-        HealthController health( "1.0.0" );
-        health.Register( router );
+        // Controllers are stored as member unique_ptrs so they outlive
+        // RegisterHttpRoutes() — the router's lambdas hold references to them.
+        m_healthController = std::make_unique<HealthController>( "1.0.0" );
+        m_healthController->Register( router );
 
-        AuthController auth( *m_authService );
-        auth.Register( router );
+        m_authController = std::make_unique<AuthController>( *m_authService );
+        m_authController->Register( router );
 
-        DeviceController devices( *m_deviceManager, *m_authService );
-        devices.Register( router );
+        m_deviceController = std::make_unique<DeviceController>( *m_deviceManager, *m_authService );
+        m_deviceController->Register( router );
 
-        SensorController sensors( *m_sensorRepo, *m_authService );
-        sensors.Register( router );
+        m_sensorController = std::make_unique<SensorController>( *m_sensorRepo, *m_authService );
+        m_sensorController->Register( router );
 
-        AutomationController automation( *m_ruleEngine, *m_authService );
-        automation.Register( router );
+        m_automationController = std::make_unique<AutomationController>( *m_ruleEngine, *m_authService );
+        m_automationController->Register( router );
 
-        MetricsController metrics( *m_wsServer, *m_authService );
-        metrics.Register( router );
+        m_metricsController = std::make_unique<MetricsController>( *m_wsServer, *m_authService );
+        m_metricsController->Register( router );
     }
 
     void Application::WireDeviceCallbacks()

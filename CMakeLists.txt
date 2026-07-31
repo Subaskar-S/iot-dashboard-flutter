@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Suppress FindBoost deprecation warning (CMP0167) on CMake 3.27+
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 project(IoTDashboard VERSION 1.0.0 LANGUAGES CXX)
 
 # ============================================================================
@@ -81,14 +86,31 @@ if(BUILD_TESTING)
 endif()
 
 # MQTT (Paho C async library)
+# Ubuntu libpaho-mqtt-dev ships a pkg-config file; macOS brew provides cmake config.
 if(ENABLE_MQTT)
     find_package(eclipse-paho-mqtt-c QUIET)
     if(eclipse-paho-mqtt-c_FOUND)
         add_compile_definitions(IOT_HAS_MQTT)
-        message(STATUS "Paho MQTT C found")
+        message(STATUS "Paho MQTT C found (cmake config)")
     else()
-        message(STATUS "Paho MQTT not found - MQTT support disabled")
-        set(ENABLE_MQTT OFF)
+        # Fallback: try pkg-config (Ubuntu)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(PAHO_MQTT QUIET paho-mqtt3as)
+        endif()
+        if(PAHO_MQTT_FOUND)
+            add_compile_definitions(IOT_HAS_MQTT)
+            # Create an imported target so the source uses the same name everywhere.
+            add_library(eclipse-paho-mqtt-c::paho-mqtt3as INTERFACE IMPORTED)
+            target_include_directories(eclipse-paho-mqtt-c::paho-mqtt3as
+                INTERFACE ${PAHO_MQTT_INCLUDE_DIRS})
+            target_link_libraries(eclipse-paho-mqtt-c::paho-mqtt3as
+                INTERFACE ${PAHO_MQTT_LIBRARIES})
+            message(STATUS "Paho MQTT C found (pkg-config)")
+        else()
+            message(STATUS "Paho MQTT not found - MQTT support disabled")
+            set(ENABLE_MQTT OFF)
+        endif()
     endif()
 endif()
 

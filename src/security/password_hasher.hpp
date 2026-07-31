@@ -13,6 +13,7 @@
 #define IOT_SECURITY_PASSWORD_HASHER_HPP
 
 #include "common/error.hpp"
+#include <cstdint>
 #include <string>
 #include <string_view>
 

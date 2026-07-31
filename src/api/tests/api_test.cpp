@@ -247,16 +247,17 @@ namespace
         AppConfig cfg;
         cfg.m_httpPort = 17080;
         cfg.m_wsPort = 17081;
-        cfg.m_mqttBroker = "tcp://127.0.0.1:1883";
+        cfg.m_mqttBroker = "tcp://127.0.0.1:19999"; // unreachable — Start() is best-effort
         cfg.m_dbPath = ":memory:";
         cfg.m_pbkdf2Iterations = 1000;
         cfg.m_jwtSecret = "test";
+        cfg.m_heartbeatPollSeconds = 3600; // don't start background thread in test
 
         Application app( cfg );
         ASSERT_TRUE( app.Initialize().has_value() );
         ASSERT_TRUE( app.Start().has_value() );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
 
         auto [status, body] = SyncGet( 17080, "/health" );
         EXPECT_EQ( status, 200 );
@@ -272,16 +273,17 @@ namespace
         AppConfig cfg;
         cfg.m_httpPort = 17082;
         cfg.m_wsPort = 17083;
-        cfg.m_mqttBroker = "tcp://127.0.0.1:1883";
+        cfg.m_mqttBroker = "tcp://127.0.0.1:19999"; // unreachable — best-effort
         cfg.m_dbPath = ":memory:";
         cfg.m_pbkdf2Iterations = 1000;
         cfg.m_jwtSecret = "test";
+        cfg.m_heartbeatPollSeconds = 3600;
 
         Application app( cfg );
         ASSERT_TRUE( app.Initialize().has_value() );
         ASSERT_TRUE( app.Start().has_value() );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
 
         // No token → 401
         auto [status, body] = SyncGet( 17082, "/devices" );

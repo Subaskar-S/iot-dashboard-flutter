@@ -110,8 +110,8 @@ class DashboardPage extends ConsumerWidget {
                                   leading: CircleAvatar(
                                     backgroundColor: d.online
                                         ? AppTheme.statusOnline(isDark)
-                                            .withOpacity(0.15)
-                                        : Colors.grey.withOpacity(0.15),
+                                            .withValues(alpha: 0.15)
+                                        : Colors.grey.withValues(alpha: 0.15),
                                     child: Icon(
                                       Icons.sensors,
                                       color: d.online
@@ -133,8 +133,8 @@ class DashboardPage extends ConsumerWidget {
                                         decoration: BoxDecoration(
                                           color: d.online
                                               ? AppTheme.statusOnline(isDark)
-                                                  .withOpacity(0.15)
-                                              : Colors.grey.withOpacity(0.15),
+                                                  .withValues(alpha: 0.15)
+                                              : Colors.grey.withValues(alpha: 0.15),
                                           borderRadius:
                                               BorderRadius.circular(12),
                                         ),
@@ -191,7 +191,7 @@ class _SummaryCard extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: color.withOpacity(0.15),
+                  backgroundColor: color.withValues(alpha: 0.15),
                   child: Icon(icon, color: color),
                 ),
                 const SizedBox(width: 12),
