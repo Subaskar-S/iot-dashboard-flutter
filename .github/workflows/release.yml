@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install C++ dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            cmake ninja-build libboost-all-dev \
+            nlohmann-json3-dev libspdlog-dev libfmt-dev \
+            libssl-dev libsqlite3-dev libpaho-mqtt-dev
+
+      - name: Build backend (Release)
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF
+          cmake --build build --parallel
+          strip build/src/iot-dashboard
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.x"
+          channel: stable
+
+      - name: Build Flutter Web
+        working-directory: flutter
+        run: |
+          flutter pub get
+          flutter build web --release
+
+      - name: Package artifacts
+        run: |
+          mkdir -p release
+          cp build/src/iot-dashboard release/
+          cp README.md QUICK_START.md release/
+          cd flutter/build && zip -r ../../release/iot-dashboard-web.zip web/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/iot-dashboard
+            release/iot-dashboard-web.zip
+          generate_release_notes: true
+          body: |
+            ## IoT Dashboard ${{ github.ref_name }}
+
+            ### Artifacts
+            - `iot-dashboard` — Linux x86_64 backend binary
+            - `iot-dashboard-web.zip` — Flutter web app (deploy to any static host)
+
+            ### Quick Start
+            See [QUICK_START.md](QUICK_START.md) for setup instructions.
+
+            ### Default Credentials
+            Username: `admin` | Password: `admin123` — **change before production use**

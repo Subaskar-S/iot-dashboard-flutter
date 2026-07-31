@@ -3,263 +3,252 @@
 ## Project Layout
 
 ```
-├── src/                    # C++20 source code
-│   ├── main.cpp            # CLI entry point
-│   ├── api/                # HTTP/WebSocket API server
-│   ├── common/             # Shared types, errors, logging
-│   ├── device/             # Device drivers (MQTT, Modbus, OPC UA)
-│   ├── data/               # Time-series data storage
-│   ├── analytics/          # Analytics and alerting
-│   └── security/           # Auth, TLS, encryption
-├── flutter/                # Flutter frontend
-│   ├── lib/                # Dart source code
-│   ├── assets/             # Images, fonts, configs
-│   └── test/               # Flutter widget tests
-├── test/                   # C++ tests (mirrors src/ structure)
-├── build/                  # Platform-specific build dirs
-├── cmake/                  # CMake configuration
-└── docs/                   # Documentation
+iot-dashboard-flutter/
+├── src/
+│   ├── main.cpp              CLI entry point (Application composition)
+│   ├── common/               Error codes, logging, shared types
+│   ├── core/                 Domain interfaces (ports) + C++20 concepts
+│   ├── database/             SQLite connection, migrations, repositories
+│   ├── network/
+│   │   ├── http/             Boost.Beast HTTP/1.1 server + router
+│   │   ├── websocket/        Boost.Beast WebSocket server + pub/sub
+│   │   └── mqtt/             Paho C async MQTT client
+│   ├── devices/              DeviceManager + HeartbeatMonitor
+│   ├── automation/           ConditionEvaluator + RuleEngine
+│   ├── security/             PasswordHasher, JwtHandler, AccessControl
+│   └── api/                  Application (composition root), controllers,
+│                             middleware
+├── flutter/
+│   └── lib/
+│       ├── core/             Theme, constants, Result<T> sealed class
+│       ├── domain/           Entities + repository abstract interfaces
+│       ├── data/             Dio API client, WebSocket client, repos
+│       └── presentation/     Riverpod providers, pages, widgets
+├── cmake/                    CompilationFlags.cmake, functions.cmake
+├── docs/                     ARCHITECTURE.md, API.md, DEVELOPMENT.md, DEPLOYMENT.md
+├── CMakeLists.txt
+└── CLAUDE.md
 ```
 
-## Code Style
+## C++ Coding Standards
 
-Based on Microsoft style with C++20 enhancements (see `.clang-format`):
+**Standard**: C++23 (uses `std::expected` for `Result<T>`, all C++20 features available)
 
-- **Standard:** C++20 (concepts, ranges, coroutines, modules)
-- **Indent:** 4 spaces
-- **Line length:** 120 characters max
-- **Naming:**
-  - Classes/Types: `PascalCase`
-  - Functions/Methods: `PascalCase`
-  - Variables: `camelCase`
-  - Constants: `kCamelCase` for `constexpr`, `ALL_CAPS` for macros
-  - Member variables: `m_` prefix (e.g., `m_deviceId`, `m_isConnected`)
-  - Private members: `m_` prefix
-- **Braces:** Allman style (each on own line)
-- **Parentheses:** Space after `(` and before `)`: `if ( condition )`
+### Naming Conventions
 
-### C++20 Features to Use
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Classes / Types | PascalCase | `DeviceManager`, `SqliteConnection` |
+| Functions / Methods | PascalCase | `Connect()`, `GetById()` |
+| Variables | camelCase | `deviceId`, `brokerUrl` |
+| Constants (`constexpr`) | `k` + PascalCase | `kMaxConnections` |
+| Macros | ALL_CAPS | `IOT_HAS_MQTT` |
+| Member variables | `m_` prefix | `m_connected`, `m_logger` |
+| Interfaces | `I` prefix | `IDeviceRepository`, `IMqttClient` |
+| CMake targets | `iot_` prefix | `iot_common`, `iot_database` |
+| Files | snake_case | `device_manager.cpp` |
 
-- **Concepts:** For template constraints
-- **Ranges:** Prefer `std::ranges::` algorithms
-- **Coroutines:** For async I/O operations
-- **Modules:** When compiler support stabilizes
-- **std::format:** Instead of printf/iostreams
-- **std::span:** For safe array views
-- **designated initializers:** For struct initialization
+### Formatting (enforced by `.clang-format`)
 
-### Example
+- **Indent**: 4 spaces
+- **Line length**: 120 characters
+- **Braces**: Allman style
+- **Parentheses**: spaces inside — `if ( condition )`, `func( arg )`
+- **Pointers**: left-aligned — `int* ptr`
+
+### Error Handling
+
+Always use `Result<T>` (`std::expected<T, Error>`). Never throw in production paths.
 
 ```cpp
-#include <concepts>
-#include <ranges>
-#include <format>
-
-namespace iot::device
+Result<DeviceInfo> DeviceManager::Get( const std::string& id )
 {
-    // Concept for device types
-    template<typename T>
-    concept Device = requires( T device )
+    auto result = m_repository.GetById( id );
+    if ( !result )
     {
-        { device.GetId() } -> std::convertible_to<std::string>;
-        { device.Connect() } -> std::same_as<bool>;
-        { device.Disconnect() } -> std::same_as<void>;
-    };
+        return std::unexpected( result.error() );
+    }
+    return result.value();
+}
+```
 
-    // Device manager using concepts and ranges
-    class DeviceManager
-    {
-        public:
-        template<Device D>
-        void RegisterDevice( D&& device )
-        {
-            m_devices.push_back( std::forward<D>( device ) );
-        }
+### Thread Safety
 
-        auto GetConnectedDevices() const
-        {
-            return m_devices 
-                | std::views::filter( []( const auto& dev ) { return dev.IsConnected(); } )
-                | std::views::transform( []( const auto& dev ) { return dev.GetId(); } );
-        }
+- Protect shared state with `std::mutex` + `std::lock_guard`
+- Use `std::atomic` for simple flags (`m_running`, `m_connected`)
+- `[[nodiscard]]` on all `Result<T>` return values
+- Never block the Boost.Asio io_context thread pool
 
-        private:
-        std::vector<std::unique_ptr<IDevice>> m_devices;
-    };
+### Modern C++ Patterns
+
+```cpp
+// Concepts
+template<typename T>
+concept Repository = requires( T repo, Entity e, Id id )
+{
+    { repo.GetById( id ) } -> std::same_as<Result<Entity>>;
+    { repo.Add( e ) }      -> std::same_as<Result<void>>;
+};
+
+// Ranges
+auto online = devices
+    | std::views::filter( []( const auto& d ) { return d.m_isConnected; } );
+
+// Structured bindings + std::expected
+if ( auto result = m_repo.GetById( id ); result )
+{
+    auto& device = result.value();
 }
 ```
 
 ## Building
 
+### C++ (macOS/Linux)
+
 ```bash
-cd build/<Platform>/<BuildType>
-cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=<BuildType>
+mkdir -p build/OSX/Debug && cd build/OSX/Debug
+cmake ../../.. -G Ninja -DCMAKE_BUILD_TYPE=Debug
 ninja
+ctest --output-on-failure
 ```
 
-### Platform-Specific Flags
+### Build types
 
-**macOS:**
+| Type | Flags | Use |
+|------|-------|-----|
+| `Debug` | `-g`, no opt | Development |
+| `Release` | `-O3`, LTO | Production |
+| `RelWithDebInfo` | `-O2 -g` | Profiling |
+
+### Flutter
+
 ```bash
-cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Debug \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_CXX_STANDARD=20
+cd flutter
+flutter pub get
+flutter analyze           # 0 errors required
+flutter build macos       # verify build
+flutter test              # widget tests
 ```
 
-**Linux:**
-```bash
-cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CXX_COMPILER=g++-11 \
-    -DCMAKE_CXX_STANDARD=20
+## Adding a New C++ Module
+
+1. Create `src/mymodule/` and `src/mymodule/tests/`
+2. Write `src/mymodule/CMakeLists.txt`:
+
+```cmake
+add_library(iot_mymodule STATIC
+    my_component.cpp
+)
+
+target_include_directories(iot_mymodule PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_ROOT}/src>
+    $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(iot_mymodule PUBLIC iot_core spdlog::spdlog)
+target_compile_features(iot_mymodule PUBLIC cxx_std_23)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 ```
 
-**Windows (MSVC):**
-```bash
-cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CXX_STANDARD=20
-```
+3. Add `mymodule` to `IOT_MODULES` in `src/CMakeLists.txt`
+4. Write at least one test per public method
 
-## Module Structure
+## Adding a New HTTP Endpoint
 
-Each module under `src/` is a static library (`iot_<module>`):
+1. Create or extend a controller in `src/api/controllers/`
+2. Inject dependencies via constructor
+3. Call `router.AddMiddleware(MakeAuthMiddleware(...))` before the route
+4. Register via `controller.Register(router)` in `Application::RegisterHttpRoutes()`
+5. Update `docs/API.md`
 
-```
-src/<module>/
-├── CMakeLists.txt          # Build definition
-├── <component>.hpp         # Public header
-├── <component>.cpp         # Implementation
-└── test/                   # Module-specific tests
-```
+## Adding a New Flutter Page
 
-## Adding a New Module
-
-1. Create `src/<module>/` directory
-2. Add `CMakeLists.txt`:
-   ```cmake
-   add_library(iot_<module> STATIC
-       <component>.cpp
-   )
-   
-   target_include_directories(iot_<module> PUBLIC
-       $<BUILD_INTERFACE:${PROJECT_ROOT}/src>
-       $<INSTALL_INTERFACE:include>
-   )
-   
-   target_link_libraries(iot_<module> PUBLIC iot_common)
-   target_compile_features(iot_<module> PUBLIC cxx_std_20)
-   ```
-3. Add `add_subdirectory(src/<module>)` to `src/CMakeLists.txt`
-4. Link from `iot_api` in `src/api/CMakeLists.txt`
-
-## Error Handling
-
-Uses `std::expected<T, Error>` for error propagation (C++23 preview via outcome):
-
-```cpp
-#include <expected>
-#include "common/error.hpp"
-
-std::expected<DeviceInfo, Error> GetDeviceInfo( const std::string& deviceId )
-{
-    if ( deviceId.empty() )
-    {
-        return std::unexpected( Error::InvalidInput );
-    }
-    
-    DeviceInfo info = { /* ... */ };
-    return info;
-}
-
-// Caller
-auto result = GetDeviceInfo( "device-123" );
-if ( result )
-{
-    // Success: use result.value()
-}
-else
-{
-    // Error: check result.error()
-}
-```
-
-## Logging
-
-All diagnostic output uses spdlog with structured logging:
-
-```cpp
-#include "common/logging.hpp"
-
-auto logger = iot::CreateLogger( "DeviceManager" );
-
-logger->info( "Device connected: id={} type={}", deviceId, deviceType );
-logger->debug( "Sensor reading: value={:.2f} unit={}", value, unit );
-logger->error( "Connection failed: device={} error={}", deviceId, errorMsg );
-```
+1. Create `flutter/lib/presentation/pages/<feature>/<feature>_page.dart`
+2. Add a Riverpod provider in `flutter/lib/presentation/providers/`
+3. Add a route in `flutter/lib/presentation/pages/app_router.dart`
+4. Add a NavigationRail destination in `flutter/lib/presentation/widgets/common/main_scaffold.dart`
 
 ## Testing
 
-Tests use Google Test in `test/`:
-
-```bash
-cd build/OSX/Debug
-ninja test
-```
-
-### Writing Tests
+### C++ test structure
 
 ```cpp
+// src/mymodule/tests/my_test.cpp
+#include "mymodule/my_component.hpp"
 #include <gtest/gtest.h>
-#include "device/mqtt_client.hpp"
+#include <gmock/gmock.h>
 
-TEST( MqttClientTest, ConnectsToBroker )
+class MyComponentTest : public ::testing::Test
 {
-    iot::device::MqttClient client{ "mqtt://localhost:1883" };
-    
-    auto result = client.Connect();
-    
-    EXPECT_TRUE( result );
-    EXPECT_TRUE( client.IsConnected() );
-}
+    protected:
+    void SetUp() override { /* arrange */ }
+};
 
-TEST( MqttClientTest, PublishesMessage )
+TEST_F( MyComponentTest, DoSomethingReturnsExpected )
 {
-    iot::device::MqttClient client{ "mqtt://localhost:1883" };
-    client.Connect();
-    
-    auto result = client.Publish( "sensors/temp", "23.5" );
-    
-    EXPECT_TRUE( result );
+    // Act
+    auto result = m_component.DoSomething( "input" );
+
+    // Assert
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), "expected" );
 }
 ```
 
-## Dependencies
+### Integration tests (real services)
 
-Key dependencies:
-- **Boost.Asio** — Async I/O
-- **Boost.Beast** — HTTP/WebSocket server
-- **nlohmann/json** — JSON parsing
-- **spdlog** — Logging
-- **SQLite** — Embedded database
-- **Paho MQTT** — MQTT protocol
-- **OpenSSL** — TLS/encryption
+Tests that need a live broker or port use `SKIP_IF_NO_BROKER()` / `SKIP_IF_PORT_BUSY()` guards — they run when the service is available and skip gracefully in CI without a broker.
 
-## Pull Request Guidelines
+### Coverage targets
+
+- New modules: ≥ 90% line coverage
+- Critical paths (auth, security): 100%
+
+## Code Quality Gates (pre-commit)
+
+```bash
+# 1. Format
+find src -name "*.cpp" -o -name "*.hpp" | xargs clang-format -i
+
+# 2. Verify format (CI uses --dry-run -Werror)
+find src -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run -Werror
+
+# 3. Build
+cd build/OSX/Debug && ninja
+
+# 4. Tests
+ctest --output-on-failure
+
+# 5. Flutter
+cd flutter && flutter analyze && flutter test
+```
+
+## Dependency Management
+
+### C++ dependencies (installed via brew / apt)
+
+| Library | brew formula | apt package |
+|---------|-------------|-------------|
+| Boost | `boost` | `libboost-all-dev` |
+| nlohmann/json | `nlohmann-json` | `nlohmann-json3-dev` |
+| spdlog | `spdlog` | `libspdlog-dev` |
+| fmt | `fmt` | `libfmt-dev` |
+| OpenSSL | `openssl` | `libssl-dev` |
+| SQLite3 | `sqlite3` | `libsqlite3-dev` |
+| Paho MQTT C | `libpaho-mqtt` | `libpaho-mqtt-dev` |
+| GoogleTest | `googletest` | `libgtest-dev` |
+
+### Flutter dependencies (pubspec.yaml)
+
+Key packages: `flutter_riverpod`, `go_router`, `dio`, `web_socket_channel`, `fl_chart`, `flutter_secure_storage`
+
+## PR Guidelines
 
 - Max 300 lines changed per PR
-- Functions max ~100 lines
-- Use C++20 features appropriately
-- No deep nesting (>3 levels)
-- Single exit point per function
-- Run tests, linter, and formatter before committing
-- Update documentation for API changes
-
-## Code Review Checklist
-
-- [ ] Follows naming conventions
-- [ ] Uses C++20 concepts where appropriate
-- [ ] Error handling via `std::expected`
-- [ ] Proper RAII and move semantics
-- [ ] No raw pointers (use smart pointers)
-- [ ] Thread-safe where applicable
-- [ ] Tests added/updated
-- [ ] Documentation updated
+- Branch from `develop`, merge into `develop`
+- Title format: `feat:`, `fix:`, `docs:`, `test:`, `ci:`
+- All tests must pass, `flutter analyze` must be clean
+- Include a description table (files changed, what was tested)

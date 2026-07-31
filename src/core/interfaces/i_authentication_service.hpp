@@ -8,6 +8,7 @@
 #define IOT_CORE_I_AUTHENTICATION_SERVICE_HPP
 
 #include "common/error.hpp"
+#include <cstdint>
 #include <string>
 #include <string_view>
 
