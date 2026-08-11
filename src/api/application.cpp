@@ -262,9 +262,11 @@ namespace iot::api
 
     void Application::SeedAdminUser()
     {
-        // Seed a default admin if none registered yet.
-        // In production, admin credentials should be set via env/config.
-        std::ignore = m_authService->RegisterUser( "admin-001", "admin", "admin123", core::Role::Admin );
+        // Seed the bootstrap admin. Credentials come from IOT_ADMIN_USER /
+        // IOT_ADMIN_PASSWORD (see main.cpp); the AppConfig defaults are for
+        // local development only.
+        std::ignore = m_authService->RegisterUser( "admin-001", m_config.m_adminUsername, m_config.m_adminPassword,
+                                                   core::Role::Admin );
     }
 
 } // namespace iot::api
