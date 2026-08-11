@@ -1,0 +1,50 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    # Port 1883 is deliberately NOT published. The broker is reachable only on
+    # the internal Docker network. Publish it (and enable auth in
+    # mosquitto.conf) only when real devices must connect from outside.
+    networks: [iot]
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    environment:
+      # Required. Generate with: openssl rand -base64 48
+      IOT_JWT_SECRET: ${IOT_JWT_SECRET:?set IOT_JWT_SECRET in .env}
+      IOT_ADMIN_USER: ${IOT_ADMIN_USER:-admin}
+      IOT_ADMIN_PASSWORD: ${IOT_ADMIN_PASSWORD:?set IOT_ADMIN_PASSWORD in .env}
+    volumes:
+      - backend-data:/var/lib/iot-dashboard
+    # Ports are not published to the host. Caddy reaches them over the
+    # internal network and is the only process exposed to the internet.
+    networks: [iot]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [iot]
+
+volumes:
+  backend-data:
+  mosquitto-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  iot:

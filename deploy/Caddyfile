@@ -1,0 +1,25 @@
+# Single HTTPS origin for the Flutter app.
+#
+#   https://$DOMAIN/...    → backend REST API  (:8080)
+#   wss://$DOMAIN/ws       → backend WebSocket (:8081)
+#
+# Caddy obtains and renews a Let's Encrypt certificate automatically, which is
+# what lets the Android release build talk to the server without cleartext.
+{
+	# Used by Let's Encrypt for expiry notices.
+	email {$ACME_EMAIL:admin@example.com}
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	# WebSocket upgrade — the backend listens for these on a separate port.
+	handle /ws* {
+		reverse_proxy backend:8081
+	}
+
+	# Everything else is the REST API.
+	handle {
+		reverse_proxy backend:8080
+	}
+}

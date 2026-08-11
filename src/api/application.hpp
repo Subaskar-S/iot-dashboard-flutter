@@ -65,6 +65,10 @@ namespace iot::api
         std::string m_jwtSecret = "change-in-production";
         uint32_t m_pbkdf2Iterations = 600000;
 
+        // Bootstrap admin — overridden from IOT_ADMIN_USER / IOT_ADMIN_PASSWORD in main().
+        std::string m_adminUsername = "admin";
+        std::string m_adminPassword = "admin123";
+
         // Heartbeat
         uint32_t m_heartbeatTimeoutSeconds = 300;
         uint32_t m_heartbeatPollSeconds = 30;

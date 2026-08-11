@@ -7,6 +7,7 @@
 #include "api/application.hpp"
 #include "common/logging.hpp"
 #include <csignal>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -16,13 +17,25 @@ using namespace iot::api;
 
 static std::function<void()> g_stopHandler;
 
+/// Returns environment variable @p name, or @p fallback when it is unset or empty.
+/// Secrets are read from the environment rather than argv, which is world-readable via ps.
+static std::string EnvOr( const char* name, const std::string& fallback )
+{
+    const char* value = std::getenv( name );
+    if ( value == nullptr || *value == '\0' )
+    {
+        return fallback;
+    }
+    return value;
+}
+
 static void SignalHandler( int )
 {
     if ( g_stopHandler )
         g_stopHandler();
 }
 
-struct Args
+struct Args 
 {
     std::string m_configPath;
     uint16_t m_httpPort = 8080;
@@ -90,12 +103,24 @@ int main( int argc, char** argv )
     InitializeLogging( args.m_logLevel );
     auto logger = CreateLogger( "Main" );
 
+    const AppConfig defaults{};
+
     AppConfig config;
     config.m_httpPort = args.m_httpPort;
     config.m_wsPort = args.m_wsPort;
     config.m_dbPath = args.m_dbPath;
     config.m_mqttBroker = args.m_mqttBroker;
     config.m_logLevel = args.m_logLevel;
+    config.m_jwtSecret = EnvOr( "IOT_JWT_SECRET", config.m_jwtSecret );
+    config.m_adminUsername = EnvOr( "IOT_ADMIN_USER", config.m_adminUsername );
+    config.m_adminPassword = EnvOr( "IOT_ADMIN_PASSWORD", config.m_adminPassword );
+
+    if ( args.m_serve &&
+         ( config.m_jwtSecret == defaults.m_jwtSecret || config.m_adminPassword == defaults.m_adminPassword ) )
+    {
+        logger->warn(
+            "Insecure defaults in use - set IOT_JWT_SECRET and IOT_ADMIN_PASSWORD before exposing this server" );
+    }
 
     Application app( config );
 
