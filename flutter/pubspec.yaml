@@ -46,8 +46,24 @@ dev_dependencies:
   json_serializable: ^6.9.0
   mockito: ^5.4.5
   build_verify: ^3.1.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+
+# Launcher icons. Drop a 1024x1024 PNG at the path below, then run:
+#
+#   dart run flutter_launcher_icons
+#
+# That regenerates every Android density plus the adaptive icon, and the iOS
+# app icon set. Until then the app ships the stock Flutter template icon.
+# Google Play separately requires a 512x512 store icon uploaded in the console.
+flutter_launcher_icons:
+  image_path: assets/icons/app_icon.png
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  adaptive_icon_background: "#0D47A1"
+  adaptive_icon_foreground: assets/icons/app_icon_foreground.png
